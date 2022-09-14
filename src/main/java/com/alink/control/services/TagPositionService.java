@@ -20,16 +20,16 @@ public class TagPositionService {
     private String BASE_STATION_ID;
     @Value("${alink.domain}")
     private String DOMAIN;
-    private final String PORT_PIN = "27";
+    private static final String PORT_PIN = "27";
     private final Map<String,String> relationTags;
     private final RedisUtils redisUtils;
 
     @Autowired
     public TagPositionService(RedisUtils redisUtils){
         this.redisUtils = redisUtils;
-        this.relationTags = new HashMap<String,String>(){{put("000000000334","000000000427");}};
         this.redisUtils.set("alink_led_open_008012000020","0");
         this.redisUtils.set("alink_led_tags",JSON.toJSONString(Collections.singletonList("008012000020")));
+        this.relationTags = new HashMap<String,String>(){{put("000000000334","000000000427");}};
     }
 
     /**
@@ -39,21 +39,41 @@ public class TagPositionService {
         if(message.contains("连接成功")){
             return;
         }
-        JSONObject baseStationInfo = new JSONObject();
-        JSONArray tagInfos = new JSONArray();
 
+        //设备信息及事件
+        JSONObject deviceInfo;
+        //信标信息
+        JSONArray beaconInfos = new JSONArray();
+
+        //判断是否为Json数组，是：定位数据，否：设备信息及事件
         Object object = JSON.parse(message);
-        if ( object instanceof JSONObject) {
-            baseStationInfo = JSON.parseObject(message);
-        } else if ( object instanceof JSONArray) {
-            tagInfos = JSONArray.parseArray(message);
+        if ( object instanceof JSONArray) {
+            beaconInfos = JSONArray.parseArray(message);
+        } else if ( object instanceof JSONObject) {
+            deviceInfo = JSON.parseObject(message);
+            if(deviceInfo.containsKey("MessageType")){
+                switch (deviceInfo.get("MessageType").toString()){
+                    case "node_status":
+                        System.out.println("收到传感器信息");
+                        break;
+                    case "base_message":
+                        System.out.println("收到基站信息");
+                        break;
+                    case "lost_alarm":
+                        System.out.println("设备离线" + message);
+                        break;
+                    default:
+                        break;
+                }
+            }
         } else {
             System.out.println("类型未知");
         }
 
-        if(tagInfos.size() >0) {
+        //收到定位消息
+        if(beaconInfos.size() >0) {
 
-            for (Object info : tagInfos) {
+            for (Object info : beaconInfos) {
                 JSONObject tagInfo = JSONObject.parseObject(info.toString());
                 String clientId = tagInfo.getString("dev");
                 double[] position = {0, 0, 0};
