@@ -3,19 +3,16 @@ package com.alink.control.services;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
 import com.alink.control.command.ControlLedCommand;
 import com.alink.control.utils.CommonUtil;
 import com.alink.control.utils.HttpUtil;
+import com.alink.control.utils.RedisUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 @Service
 public class TagPositionService {
@@ -23,18 +20,16 @@ public class TagPositionService {
     private String BASE_STATION_ID;
     @Value("${alink.domain}")
     private String DOMAIN;
-
-    private final List<String> LED_TAGS = Collections.singletonList("008012000007");
     private final String PORT_PIN = "27";
-    private final Map<String,String> LED_TAGS_INFO;
     private final Map<String,String> relationTags;
-    private final Map<String,double[]> tagPositions;
+    private final RedisUtils redisUtils;
 
     @Autowired
-    public TagPositionService(){
-        this.LED_TAGS_INFO = new HashMap<String,String>(){{put("008012000007","0");}};
+    public TagPositionService(RedisUtils redisUtils){
+        this.redisUtils = redisUtils;
         this.relationTags = new HashMap<String,String>(){{put("000000000334","000000000427");}};
-        this.tagPositions  = new HashMap<>();
+        this.redisUtils.set("alink_led_open_008012000020","0");
+        this.redisUtils.set("alink_led_tags",JSON.toJSONString(Collections.singletonList("008012000020")));
     }
 
     /**
@@ -72,32 +67,16 @@ public class TagPositionService {
                     position[2] = Double.parseDouble(tagInfo.getString("z"));
                 }
 
-                if (tagPositions.containsKey(clientId)) {
-                    tagPositions.replace(clientId, position);
-                } else {
-                    tagPositions.put(clientId, position);
-                }
+                redisUtils.set("alink_position_" + clientId,position);
             }
 
             for(Map.Entry<String,String> entry : relationTags.entrySet()){
-                if(tagPositions.containsKey(entry.getKey()) && tagPositions.containsKey(entry.getValue())){
 
-                    double distance = CommonUtil.calculateDistance(tagPositions.get(entry.getKey()),tagPositions.get(entry.getValue()));
+                String s_position = "alink_position_" + entry.getKey();
+                String t_position = "alink_position_" + entry.getValue();
 
-                    System.out.println("标签之间距离为：" + distance + "米");
-
-                    String ledOpen = "0";
-                    if(distance < 1){
-                        ledOpen = "1";
-                    }
-
-                    if(!ledOpen.equals(LED_TAGS_INFO.get("008012000007"))){
-                        LED_TAGS_INFO.replace("008012000007",ledOpen);
-
-                        CommonUtil.asyncExecute(()->{
-                            controlLed(Collections.singletonList(LED_TAGS.get(0)),LED_TAGS_INFO.get("008012000007"),PORT_PIN);
-                        });
-                    }
+                if(redisUtils.hashKey(s_position) && redisUtils.hashKey(t_position)){
+                    controlLed(s_position,t_position,"008012000020");
                 }
             }
         }
@@ -105,20 +84,38 @@ public class TagPositionService {
 
     /**
      * 控制LED灯
-     * @param devs  led标签Id
-     * @param open  是否亮灯
-     * @param port_pin  亮灯颜色
+     * @param s_tag  起始标签
+     * @param t_tag  目标标签
      */
-    private void controlLed(List<String> devs, String open, String port_pin){
+    private void controlLed(String s_tag,String t_tag,String led_tag){
 
-        String url = DOMAIN + "duplex/lamps";
+        double[] s_Coordinate = JSON.parseObject(redisUtils.get(s_tag).toString(),double[].class);
+        double[] t_Coordinate = JSON.parseObject(redisUtils.get(t_tag).toString(),double[].class);
 
-        ControlLedCommand controlLedCommand = new ControlLedCommand(BASE_STATION_ID,
-                port_pin,
-                devs,
-                open);
+        //标签距离
+        double distance = CommonUtil.calculateDistance(s_Coordinate,t_Coordinate);
+        System.out.println("标签之间距离为：" + distance + "米");
 
-        String response = HttpUtil.postJson(url, JSON.toJSONString(controlLedCommand));
+        String ledOpen = distance < 0.5 ? "1" : "0";
+        String ledTagOpenKey = "alink_led_open_" + led_tag;
+
+        if(!ledOpen.equals(redisUtils.get(ledTagOpenKey).toString())){
+            redisUtils.set(ledTagOpenKey,ledOpen);
+
+            CommonUtil.asyncExecute(()->{
+                String url = DOMAIN + "duplex/lamps";
+                List<String> devs = JSON.parseObject(redisUtils.get("alink_led_tags").toString(), new TypeReference<List<String>>(){});
+
+                ControlLedCommand controlLedCommand = new ControlLedCommand(BASE_STATION_ID,
+                        PORT_PIN,
+                        devs,
+                        ledOpen);
+
+                String response = HttpUtil.postJson(url, JSON.toJSONString(controlLedCommand));
+            });
+        }
+
+
     }
 }
 
