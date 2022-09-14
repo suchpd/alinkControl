@@ -6,36 +6,41 @@ import com.alibaba.fastjson.JSONObject;
 import com.alink.control.command.ControlLedCommand;
 import com.alink.control.utils.CommonUtil;
 import com.alink.control.utils.HttpUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class TagPositionService {
-    private static final String BASE_STATION_ID = "3000100084";
-    private static final String DOMAIN="http://localhost:8081/";
-    private static final List<String> LED_TAGS = Collections.singletonList("008012000007");
-    private static final String PORT_PIN = "27";
-    private static final Map<String,String> LED_TAGS_INFO = new HashMap<>();
-    private static final Map<String,String> relationTags = new HashMap<>();
-    private static Map<String,double[]> tagPositions  = new HashMap<>();
-    private static LocalDateTime lastControlLedDate = LocalDateTime.now();
+    @Value("${alink.base.station.id}")
+    private String BASE_STATION_ID;
+    @Value("${alink.domain}")
+    private String DOMAIN;
 
-    @PostConstruct
-    public void init(){
-        LED_TAGS_INFO.put("008012000007","0");
-        relationTags.put("000000000334","000000000427");
+    private final List<String> LED_TAGS = Collections.singletonList("008012000007");
+    private final String PORT_PIN = "27";
+    private final Map<String,String> LED_TAGS_INFO;
+    private final Map<String,String> relationTags;
+    private final Map<String,double[]> tagPositions;
+
+    @Autowired
+    public TagPositionService(){
+        this.LED_TAGS_INFO = new HashMap<String,String>(){{put("008012000007","0");}};
+        this.relationTags = new HashMap<String,String>(){{put("000000000334","000000000427");}};
+        this.tagPositions  = new HashMap<>();
     }
 
     /**
      * 计算坐标
      */
-    public static void calculateTheCoordinates(String message){
+    public void calculateTheCoordinates(String message){
         if(message.contains("连接成功")){
             return;
         }
@@ -88,8 +93,6 @@ public class TagPositionService {
 
                     if(!ledOpen.equals(LED_TAGS_INFO.get("008012000007"))){
                         LED_TAGS_INFO.replace("008012000007",ledOpen);
-                        lastControlLedDate =  LocalDateTime.now();
-//                        controlLed(Collections.singletonList(LED_TAGS.get(0)),LED_TAGS_INFO.get("008012000007"),PORT_PIN);
 
                         CommonUtil.asyncExecute(()->{
                             controlLed(Collections.singletonList(LED_TAGS.get(0)),LED_TAGS_INFO.get("008012000007"),PORT_PIN);
@@ -106,7 +109,7 @@ public class TagPositionService {
      * @param open  是否亮灯
      * @param port_pin  亮灯颜色
      */
-    private static void controlLed(List<String> devs, String open, String port_pin){
+    private void controlLed(List<String> devs, String open, String port_pin){
 
         String url = DOMAIN + "duplex/lamps";
 
@@ -114,9 +117,8 @@ public class TagPositionService {
                 port_pin,
                 devs,
                 open);
-        controlLedCommand.setBid(BASE_STATION_ID);
 
-        HttpUtil.postJson(url, JSON.toJSONString(controlLedCommand));
+        String response = HttpUtil.postJson(url, JSON.toJSONString(controlLedCommand));
     }
 }
 

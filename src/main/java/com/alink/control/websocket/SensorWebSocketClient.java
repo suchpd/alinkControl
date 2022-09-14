@@ -2,7 +2,6 @@ package com.alink.control.websocket;
 
 import com.alink.control.services.TagPositionService;
 import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.drafts.Draft;
 import org.java_websocket.handshake.ServerHandshake;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -10,12 +9,12 @@ import java.net.URI;
 
 public class SensorWebSocketClient extends WebSocketClient {
 
-    public SensorWebSocketClient(URI serverUri , Draft draft ) {
-        super( serverUri, draft );
-    }
+    @Autowired
+    private final TagPositionService tagPositionService;
 
-    public SensorWebSocketClient(URI serverURI ) {
+    public SensorWebSocketClient(URI serverURI,TagPositionService tagPositionService) {
         super( serverURI );
+        this.tagPositionService = tagPositionService;
     }
 
     @Override
@@ -25,7 +24,7 @@ public class SensorWebSocketClient extends WebSocketClient {
 
     @Override
     public void onMessage(String s) {
-        TagPositionService.calculateTheCoordinates(s);
+        tagPositionService.calculateTheCoordinates(s);
     }
 
     @Override

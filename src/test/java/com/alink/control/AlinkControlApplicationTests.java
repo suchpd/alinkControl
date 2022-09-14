@@ -21,8 +21,8 @@ class AlinkControlApplicationTests {
 
     @Test
     public void testString() {
-        strRedisTemplate.opsForValue().set("strKey", "zwqh");
-        System.out.println(strRedisTemplate.opsForValue().get("strKey"));
+        strRedisTemplate.opsForValue().set("such", "hello");
+        System.out.println(strRedisTemplate.opsForValue().get("such"));
     }
 
 }
