@@ -4,10 +4,10 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
-import com.alink.control.command.ControlLedCommand;
 import com.alink.control.utils.CommonUtil;
 import com.alink.control.utils.HttpUtil;
 import com.alink.control.utils.RedisUtils;
+import com.alink.control.utils.SynchronizedHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,13 +20,18 @@ public class TagPositionService {
     private String BASE_STATION_ID;
     @Value("${alink.domain}")
     private String DOMAIN;
+    @Value("${alink.way.of.communication}")
+    private String Way_Of_Communication;
+
     private static final String PORT_PIN = "27";
     private final Map<String,String> relationTags;
     private final RedisUtils redisUtils;
+    private final SynchronizedHelper synchronizedHelper;
 
     @Autowired
-    public TagPositionService(RedisUtils redisUtils){
+    public TagPositionService(RedisUtils redisUtils, SynchronizedHelper synchronizedHelper){
         this.redisUtils = redisUtils;
+        this.synchronizedHelper = synchronizedHelper;
         this.redisUtils.set("alink_led_open_008012000020","0");
         this.redisUtils.set("alink_led_tags",JSON.toJSONString(Collections.singletonList("008012000020")));
         this.relationTags = new HashMap<String,String>(){{put("000000000334","000000000427");}};
@@ -54,7 +59,14 @@ public class TagPositionService {
             if(deviceInfo.containsKey("MessageType")){
                 switch (deviceInfo.get("MessageType").toString()){
                     case "node_status":
-                        System.out.println("收到传感器信息");
+                        JSONObject nodeObject = JSON.parseObject(message);
+                        if(nodeObject.containsKey("led")){
+                            String nodeLed = nodeObject.get("led").toString();
+                            if(!"null".equals(nodeLed)){
+                                redisUtils.set("alink_led_open_" + nodeObject.get("dev"),"0".equals(nodeLed) ? "0" : "1");
+                            }
+                            System.out.println("收到传感器信息,led:" + nodeObject.get("led"));
+                        }
                         break;
                     case "base_message":
                         System.out.println("收到基站信息");
@@ -116,22 +128,46 @@ public class TagPositionService {
         double distance = CommonUtil.calculateDistance(s_Coordinate,t_Coordinate);
         System.out.println("标签之间距离为：" + distance + "米");
 
-        String ledOpen = distance < 0.5 ? "1" : "0";
+        String ledOpen = distance < 1 ? "1" : "0";
         String ledTagOpenKey = "alink_led_open_" + led_tag;
 
         if(!ledOpen.equals(redisUtils.get(ledTagOpenKey).toString())){
             redisUtils.set(ledTagOpenKey,ledOpen);
 
+            System.out.println("标签" + ("0".equals(ledOpen) ? "熄灯" : "亮灯"));
+
             CommonUtil.asyncExecute(()->{
-                String url = DOMAIN + "duplex/lamps";
                 List<String> devs = JSON.parseObject(redisUtils.get("alink_led_tags").toString(), new TypeReference<List<String>>(){});
+                JSONObject ledControlCommand = new JSONObject();
 
-                ControlLedCommand controlLedCommand = new ControlLedCommand(BASE_STATION_ID,
-                        PORT_PIN,
-                        devs,
-                        ledOpen);
+                synchronizedHelper.exec(BASE_STATION_ID,()->{
+                    String response;
 
-                String response = HttpUtil.postJson(url, JSON.toJSONString(controlLedCommand));
+                    //双工非漫游
+                    if("duplex_non-roaming".equals(Way_Of_Communication)){
+                        ledControlCommand.put("bid",BASE_STATION_ID);
+                        ledControlCommand.put("dev_addrs",devs);
+                        ledControlCommand.put("switches",ledOpen.equalsIgnoreCase("0") ? "01270000" : "01270001");
+
+                        response = HttpUtil.postJson(DOMAIN + "duplex/sendCommand", JSON.toJSONString(ledControlCommand));
+
+                    //双工漫游
+                    }else if("duplex_roaming".equals(Way_Of_Communication)){
+                        ledControlCommand.put("dev_addrs",devs);
+                        ledControlCommand.put("switches",ledOpen.equalsIgnoreCase("0") ? "01270000" : "01270001");
+
+                        response = HttpUtil.postJson(DOMAIN + "duplex/sendDuplexRoam", JSON.toJSONString(ledControlCommand));
+                    }else{
+                        ledControlCommand.put("bid",BASE_STATION_ID);
+                        ledControlCommand.put("port_pin",PORT_PIN);
+                        ledControlCommand.put("devs",devs);
+                        ledControlCommand.put("open",ledOpen);
+
+                        response = HttpUtil.postJson(DOMAIN + "duplex/lamps", JSON.toJSONString(ledControlCommand));
+                    }
+
+                    System.out.println("发送指令成功！" + response);
+                });
             });
         }
 

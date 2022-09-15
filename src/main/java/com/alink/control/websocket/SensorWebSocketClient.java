@@ -24,7 +24,7 @@ public class SensorWebSocketClient extends WebSocketClient {
 
     @Override
     public void onMessage(String s) {
-//        tagPositionService.calculateTheCoordinates(s);
+        tagPositionService.calculateTheCoordinates(s);
     }
 
     @Override
