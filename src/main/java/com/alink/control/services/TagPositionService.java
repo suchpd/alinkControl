@@ -23,6 +23,9 @@ public class TagPositionService {
     @Value("${alink.way.of.communication}")
     private String Way_Of_Communication;
 
+    @Value("${alink_minimum.hint.distance}")
+    private double Minimum_Hint_Distance;
+
     private static final String PORT_PIN = "27";
     private final Map<String,String> relationTags;
     private final RedisUtils redisUtils;
@@ -34,7 +37,7 @@ public class TagPositionService {
         this.synchronizedHelper = synchronizedHelper;
         this.redisUtils.set("alink_led_open_008012000020","0");
         this.redisUtils.set("alink_led_tags",JSON.toJSONString(Collections.singletonList("008012000020")));
-        this.relationTags = new HashMap<String,String>(){{put("000000000334","000000000427");}};
+        this.relationTags = new HashMap<String,String>(){{put("000000000334","070001000010");}};
     }
 
     /**
@@ -108,7 +111,7 @@ public class TagPositionService {
                 String t_position = "alink_position_" + entry.getValue();
 
                 if(redisUtils.hashKey(s_position) && redisUtils.hashKey(t_position)){
-                    controlLed(s_position,t_position,"008012000020");
+                    controlLed(s_position,t_position,entry.getValue());
                 }
             }
         }
@@ -128,7 +131,7 @@ public class TagPositionService {
         double distance = CommonUtil.calculateDistance(s_Coordinate,t_Coordinate);
         System.out.println("标签之间距离为：" + distance + "米");
 
-        String ledOpen = distance < 1 ? "1" : "0";
+        String ledOpen = distance < Minimum_Hint_Distance ? "1" : "0";
         String ledTagOpenKey = "alink_led_open_" + led_tag;
 
         if(!ledOpen.equals(redisUtils.get(ledTagOpenKey).toString())){
@@ -137,7 +140,8 @@ public class TagPositionService {
             System.out.println("标签" + ("0".equals(ledOpen) ? "熄灯" : "亮灯"));
 
             CommonUtil.asyncExecute(()->{
-                List<String> devs = JSON.parseObject(redisUtils.get("alink_led_tags").toString(), new TypeReference<List<String>>(){});
+//                List<String> devs = JSON.parseObject(redisUtils.get("alink_led_tags").toString(), new TypeReference<List<String>>(){});
+                List<String> devs = Collections.singletonList(led_tag) ;
                 JSONObject ledControlCommand = new JSONObject();
 
                 synchronizedHelper.exec(BASE_STATION_ID,()->{
