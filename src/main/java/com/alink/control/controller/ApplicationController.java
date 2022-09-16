@@ -53,6 +53,8 @@ public class ApplicationController {
         System.out.println("base_status_post" + msg);
     }
 
+
+
     /**
      * 开启/关闭标签过滤功能
      * 默认关闭，开启时过滤所有标签，需要激活标签才可以处理标签信息
@@ -158,6 +160,48 @@ public class ApplicationController {
         }
 
         return response.get("data");
+    }
+
+    /**
+     * 双工通信控制LED
+     * @param jsonObject    请求参数
+     * {
+     *  "bid":"80000000001",
+     *  "port_pin":"27",
+     *  "devs":["030000000001","030000000002","030000000003"],
+     *  "open": "1"
+     * }
+     */
+    @PostMapping("duplex/lamps")
+    public void duplexLamps(@RequestBody JSONObject jsonObject){
+        HttpUtil.postJson(DOMAIN + "duplex/lamps",jsonObject.toJSONString());
+    }
+
+    /**
+     * 双工非漫游控制LED
+     * @param jsonObject    请求参数
+     * {
+     *  "bid":"80000000001",
+     *  "dev_addrs":["030000000001","030000000002","030000000003"],
+     *  "switches": "01270001"
+     * }
+     */
+    @PostMapping("duplex/sendCommand")
+    public void sendCommand(@RequestBody JSONObject jsonObject){
+        HttpUtil.postJson(DOMAIN + "duplex/sendCommand",jsonObject.toJSONString());
+    }
+
+    /**
+     * 双工漫游控制LED
+     * @param jsonObject    请求参数
+     * {
+     *  "dev_addrs":["030000000001","030000000002","030000000003"],
+     *  "switches": "01270001"
+     * }
+     */
+    @PostMapping("duplex/sendDuplexRoam")
+    public void sendDuplexRoam(@RequestBody JSONObject jsonObject){
+        HttpUtil.postJson(DOMAIN + "duplex/sendDuplexRoam",jsonObject.toJSONString());
     }
 }
 
