@@ -22,7 +22,7 @@ public class RedisUtils {
      *
      * @param key  键
      * @param time 时间(秒)
-     * @return
+     * @return  是否成功
      */
     public boolean expire(String key, long time) {
         try {
@@ -163,7 +163,7 @@ public class RedisUtils {
      * @param key  键 不能为null
      * @param item 项 不能为null
      */
-    public Object hashGetItem(String key, String item) {
+    public Object hashGet(String key, String item) {
         return redisTemplate.opsForHash().get(key, item);
     }
 
@@ -224,7 +224,7 @@ public class RedisUtils {
      * @param value 值
      * @return true 成功 false失败
      */
-    public boolean hset(String key, String item, Object value) {
+    public boolean hashSet(String key, String item, Object value) {
         try {
             redisTemplate.opsForHash().put(key, item, value);
             return true;
@@ -243,7 +243,7 @@ public class RedisUtils {
      * @param time  时间(秒) 注意:如果已存在的hash表有时间,这里将会替换原有的时间
      * @return true 成功 false失败
      */
-    public boolean hset(String key, String item, Object value, long time) {
+    public boolean hashSet(String key, String item, Object value, long time) {
         try {
             redisTemplate.opsForHash().put(key, item, value);
             if (time > 0) {
@@ -263,7 +263,7 @@ public class RedisUtils {
      * @param key  键 不能为null
      * @param item 项 可以使多个 不能为null
      */
-    public void hdel(String key, Object... item) {
+    public void hashDelete(String key, Object... item) {
         redisTemplate.opsForHash().delete(key, item);
     }
 
@@ -275,7 +275,7 @@ public class RedisUtils {
      * @param item 项 不能为null
      * @return true 存在 false不存在
      */
-    public boolean hHasKey(String key, String item) {
+    public boolean hashHasKey(String key, String item) {
         return redisTemplate.opsForHash().hasKey(key, item);
     }
 
@@ -287,7 +287,7 @@ public class RedisUtils {
      * @param item 项
      * @param by   要增加几(大于0)
      */
-    public double hincr(String key, String item, double by) {
+    public double hashIncr(String key, String item, double by) {
         return redisTemplate.opsForHash().increment(key, item, by);
     }
 
@@ -299,7 +299,7 @@ public class RedisUtils {
      * @param item 项
      * @param by   要减少记(小于0)
      */
-    public double hdecr(String key, String item, double by) {
+    public double hashDecr(String key, String item, double by) {
         return redisTemplate.opsForHash().increment(key, item, -by);
     }
 
@@ -419,7 +419,7 @@ public class RedisUtils {
      * @param start 开始
      * @param end   结束 0 到 -1代表所有值
      */
-    public List<Object> lGet(String key, long start, long end) {
+    public List<Object> listGet(String key, long start, long end) {
         try {
             return redisTemplate.opsForList().range(key, start, end);
         } catch (Exception e) {
@@ -434,7 +434,7 @@ public class RedisUtils {
      *
      * @param key 键
      */
-    public long lGetListSize(String key) {
+    public long listGetSize(String key) {
         try {
             return redisTemplate.opsForList().size(key);
         } catch (Exception e) {
@@ -450,7 +450,7 @@ public class RedisUtils {
      * @param key   键
      * @param index 索引 index>=0时， 0 表头，1 第二个元素，依次类推；index<0时，-1，表尾，-2倒数第二个元素，依次类推
      */
-    public Object lGetIndex(String key, long index) {
+    public Object listGetIndex(String key, long index) {
         try {
             return redisTemplate.opsForList().index(key, index);
         } catch (Exception e) {
@@ -466,7 +466,7 @@ public class RedisUtils {
      * @param key   键
      * @param value 值
      */
-    public boolean lSet(String key, Object value) {
+    public boolean listSet(String key, Object value) {
         try {
             redisTemplate.opsForList().rightPush(key, value);
             return true;
@@ -484,7 +484,7 @@ public class RedisUtils {
      * @param value 值
      * @param time  时间(秒)
      */
-    public boolean lSet(String key, Object value, long time) {
+    public boolean listSet(String key, Object value, long time) {
         try {
             redisTemplate.opsForList().rightPush(key, value);
             if (time > 0) {
@@ -506,7 +506,7 @@ public class RedisUtils {
      * @param value 值
      * @return
      */
-    public boolean lSet(String key, List<Object> value) {
+    public boolean listSet(String key, List<Object> value) {
         try {
             redisTemplate.opsForList().rightPushAll(key, value);
             return true;
@@ -526,7 +526,7 @@ public class RedisUtils {
      * @param time  时间(秒)
      * @return
      */
-    public boolean lSet(String key, List<Object> value, long time) {
+    public boolean listSet(String key, List<Object> value, long time) {
         try {
             redisTemplate.opsForList().rightPushAll(key, value);
             if (time > 0) {
@@ -549,7 +549,7 @@ public class RedisUtils {
      * @return
      */
 
-    public boolean lUpdateIndex(String key, long index, Object value) {
+    public boolean listUpdateIndex(String key, long index, Object value) {
         try {
             redisTemplate.opsForList().set(key, index, value);
             return true;
@@ -569,7 +569,7 @@ public class RedisUtils {
      * @return 移除的个数
      */
 
-    public long lRemove(String key, long count, Object value) {
+    public long listRemove(String key, long count, Object value) {
         try {
             Long remove = redisTemplate.opsForList().remove(key, count, value);
             return remove;

@@ -23,7 +23,6 @@ public class TagPositionService {
     private String DOMAIN;
     @Value("${alink.way.of.communication}")
     private String Way_Of_Communication;
-
     @Value("${alink_minimum.hint.distance}")
     private double Minimum_Hint_Distance;
 
@@ -41,7 +40,7 @@ public class TagPositionService {
         this.rabbitProducer = rabbitProducer;
         this.redisUtils.set("alink_led_open_008012000020","0");
         this.redisUtils.set("alink_led_tags",JSON.toJSONString(Collections.singletonList("008012000020")));
-        this.relationTags = new HashMap<String,String>(){{put("000000000334","070001000010");}};
+        this.relationTags = new HashMap<String,String>(){{put("000000000334","070001000010");put("016016000155","070001000007");}};
         this.tagPositions = new HashMap<>();
     }
 
@@ -138,8 +137,9 @@ public class TagPositionService {
     private void controlLed(String s_tag,String t_tag,String led_tag){
 
 //        double[] s_Coordinate = JSON.parseObject(tagPositions.get(s_tag).toString(),double[].class);
-        double[] s_Coordinate = tagPositions.get(s_tag);
 //        double[] t_Coordinate = JSON.parseObject(tagPositions.get(t_tag).toString(),double[].class);
+
+        double[] s_Coordinate = tagPositions.get(s_tag);
         double[] t_Coordinate = tagPositions.get(t_tag);
 
         //标签距离
