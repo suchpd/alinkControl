@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alink.control.command.BatchActivateDevCommand;
 import com.alink.control.command.SetTagTypeCommand;
+import com.alink.control.command.TagBindEntityCommand;
 import com.alink.control.utils.HttpUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
@@ -83,6 +84,34 @@ public class ApplicationController {
     @PostMapping("batchActivateDevs")
     public void batchActivateDevs(@RequestBody BatchActivateDevCommand batchActivateDevCommand){
         HttpUtil.postJson(DOMAIN + "logistics/batchActivateDevs", JSON.toJSONString(batchActivateDevCommand));
+    }
+
+    /**
+     * 标签绑定实体
+     * @param tagBindEntityCommand  绑定信息
+     */
+    @PostMapping("bind")
+    public void bind(@RequestBody TagBindEntityCommand tagBindEntityCommand){
+        HttpUtil.postJson(DOMAIN + "logistics/bind", JSON.toJSONString(tagBindEntityCommand));
+    }
+
+    /**
+     * 解绑
+     * @param dev   标签Id
+     */
+    @GetMapping("unbind")
+    public void unbind(String dev){
+        HttpUtil.get(DOMAIN + "logistics/unbind?dev=" + dev);
+    }
+
+    /**
+     * 获取标签绑定状态
+     * @param dev   标签Id
+     * @return  标签绑定状态
+     */
+    @GetMapping("getBindStatus")
+    public Object getBindStatus(String dev){
+        return HttpUtil.get(DOMAIN + "logistics/getbindstatus?dev=" + dev);
     }
 
     /**

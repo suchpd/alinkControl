@@ -38,9 +38,7 @@ public class TagPositionService {
         this.redisUtils = redisUtils;
         this.synchronizedHelper = synchronizedHelper;
         this.rabbitProducer = rabbitProducer;
-        this.redisUtils.set("alink_led_open_008012000020","0");
-        this.redisUtils.set("alink_led_tags",JSON.toJSONString(Collections.singletonList("008012000020")));
-        this.relationTags = new HashMap<String,String>(){{put("000000000334","070001000010");put("016016000155","070001000007");}};
+        this.relationTags = new HashMap<String,String>(){{put("016016000159","070001000010");put("016016000155","070001000007");}};
         this.tagPositions = new HashMap<>();
     }
 
