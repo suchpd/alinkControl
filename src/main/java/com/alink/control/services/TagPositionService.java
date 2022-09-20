@@ -29,6 +29,7 @@ public class TagPositionService {
     private static final String PORT_PIN = "27";
     private final Map<String,String> relationTags;
     private final Map<String,double[]> tagPositions;
+    private final Map<String,String> tagLedStatus;
     private final RedisUtils redisUtils;
     private final SynchronizedHelper synchronizedHelper;
     private final RabbitProducer rabbitProducer;
@@ -38,8 +39,9 @@ public class TagPositionService {
         this.redisUtils = redisUtils;
         this.synchronizedHelper = synchronizedHelper;
         this.rabbitProducer = rabbitProducer;
-        this.relationTags = new HashMap<String,String>(){{put("016016000159","070001000010");put("016016000155","070001000007");}};
+        this.relationTags = new HashMap<String,String>(){{put("016016000159","070001000008");put("016016000155","070001000007");}};
         this.tagPositions = new HashMap<>();
+        this.tagLedStatus = new HashMap<>();
     }
 
     /**
@@ -153,8 +155,16 @@ public class TagPositionService {
         String ledOpen = distance < Minimum_Hint_Distance ? "1" : "0";
         String ledTagOpenKey = "alink_led_open_" + led_tag;
 
-        if(!redisUtils.hashKey(ledTagOpenKey) || !ledOpen.equals(redisUtils.get(ledTagOpenKey).toString())){
-            redisUtils.set(ledTagOpenKey,ledOpen);
+        if(!tagLedStatus.containsKey(ledTagOpenKey) || !ledOpen.equals(tagLedStatus.get(ledTagOpenKey))){
+
+            if(!tagLedStatus.containsKey(ledTagOpenKey)){
+                tagLedStatus.put(ledTagOpenKey,ledOpen);
+            }else{
+                tagLedStatus.replace(ledTagOpenKey,ledOpen);
+            }
+
+//        if(!redisUtils.hashKey(ledTagOpenKey) || !ledOpen.equals(redisUtils.get(ledTagOpenKey).toString())){
+//            redisUtils.set(ledTagOpenKey,ledOpen);
 
             System.out.println("标签" + ("0".equals(ledOpen) ? "熄灯" : "亮灯"));
             List<String> devs = Collections.singletonList(led_tag) ;
