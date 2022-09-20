@@ -80,6 +80,12 @@ public class TagPositionService {
                     case "lost_alarm":
 //                        System.out.println("设备离线" + message);
                         break;
+                    case "acc_move":
+//                        System.out.println("进入限制区域" + message);
+                        break;
+                    case "restricted_alarm":
+//                        System.out.println("限制区域警报" + message);
+                        break;
                     default:
                         break;
                 }
